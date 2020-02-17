@@ -59,8 +59,30 @@ parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
 parser.add_argument('--dist-backend', default='gloo', type=str,
                     help='distributed backend')
 
-
 def main():
+    #valdir = os.path.join(args.data, 'val')
+    valdir = "C:\\Users\\SPACE\\Downloads"
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    val_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(valdir, transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize,
+        ])),
+        batch_size=30, shuffle=False,
+        num_workers=1, pin_memory=True)
+        
+    for i, (input, target) in enumerate(val_loader):
+        #target = target.cuda(async=True)
+        #input_var = torch.autograd.Variable(input, volatile=True)
+        #target_var = torch.autograd.Variable(target, volatile=True)
+        print(target)
+        print(input.shape)
+        break
+def main2():
     global args
     args = parser.parse_args()
 
@@ -84,26 +106,27 @@ def main():
             model = ShuffleNet(groups=8)
         else:
             model = models.__dict__[args.arch]()
-			
-	print(model)
-
-    if not args.distributed:
-        if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-            model.features = torch.nn.DataParallel(model.features)
-            model.cuda()
-        else:
-            model = torch.nn.DataParallel(model).cuda()
-    else:
-        model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model)
+        print(model)
+    
+    #if not args.distributed:
+    #    if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
+    #        model.features = torch.nn.DataParallel(model.features)
+    #        #model.cuda()
+    #    else:
+    #        #model = torch.nn.DataParallel(model).cuda()
+    #        model = torch.nn.DataParallel(model)
+    #        
+    #    #model.cuda()
+    #    model = torch.nn.parallel.DistributedDataParallel(model)
 
     # define loss function (criterion) and optimizer
-    criterion = nn.CrossEntropyLoss().cuda()
-
+    #criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss()
+    
     if args.evaluate:
-	if os.path.isfile(args.evaluate):
+        if os.path.isfile(args.evaluate):
             print("=> loading model '{}'".format(args.evaluate))
-            model.load_state_dict(torch.load(args.evaluate))
+            model.load_state_dict(torch.load(args.evaluate, map_location=torch.device('cpu')))
         else:
             print("=> no model found at '{}'".format(args.evaluate))
 
@@ -140,7 +163,7 @@ def validate(val_loader, model, criterion):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        target = target.cuda(async=True)
+        #target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
 
